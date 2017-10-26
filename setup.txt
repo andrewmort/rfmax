@@ -1,0 +1,16 @@
+Setup is done following steps from https://devzone.nordicsemi.com/tutorials/7/
+
+1. Download and install jlink software
+2. Download nRF5 Command Line Tools, unzip, and move to /usr/local/
+3. Link nrfjprog from nRF5 command line tools to /usr/local/bin
+4. Download arm-gcc for MacOSX, unzip, and move to /usr/local/
+5. Link bin files from arm toolchain directory to /usr/local/bin
+    ln -s /usr/local/gcc-arm-none-eabi-6-2017-q2-update/bin/* /usr/local/bin/
+6. Update <SDK>/components/toolchain/gcc/Makefile.posix so that 
+    GNU_INSTALL_ROOT points to the GNU tools for Arm bin directory
+7. Change directory to nRF5_SDK/nRF5_SDK_14.1.0_1dda907/examples/peripheral/blinky/pca10040/blank/armgcc/
+8. Compile program by typing make
+9. Erase target, `nrfjprog --family nRF52 -e`
+10. Load firmware to target, `nrfjprog --family nRF52 --program _build/*.hex`
+11. Reset and run target, `nrfjprog --family nRF52 -r`
+
