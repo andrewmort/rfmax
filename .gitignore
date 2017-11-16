@@ -1,0 +1,16 @@
+# Objects and Libraries
+*.slo
+*.lo
+*.o
+*.a
+*.la
+*.lai
+*.so
+*.dll
+*.dylib
+
+# MacOS Stuff
+.DS_Store
+
+# SDKs
+nRF5_SDK_*
