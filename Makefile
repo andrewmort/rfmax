@@ -51,8 +51,6 @@ $(SDK_FILE):
 # Fix paths and names of arm gcc in SDK Makefile.posix file
 $(SDK_MAKEFILE): $(SDK_DIR)
 	@echo fixing paths in SDK...
-	#@echo SDK_MAKEFILE=$(SDK_MAKEFILE)
-	#@echo GNU_DIR=$(GNU_DIR)
-	#@echo GNU_VERSION=$(GNU_VERSION)
-
-
+	@echo "GNU_INSTALL_ROOT := $(GNU_DIR)" > $(SDK_MAKEFILE)
+	@echo "GNU_VERSION := $(GNU_VERSION)" >> $(SDK_MAKEFILE)
+	@echo "GNU_PREFIX := $(GNU_PREFIX)" >> $(SDK_MAKEFILE)
