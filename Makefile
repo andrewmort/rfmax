@@ -54,3 +54,6 @@ $(SDK_MAKEFILE): $(SDK_DIR)
 	@echo "GNU_INSTALL_ROOT := $(GNU_DIR)" > $(SDK_MAKEFILE)
 	@echo "GNU_VERSION := $(GNU_VERSION)" >> $(SDK_MAKEFILE)
 	@echo "GNU_PREFIX := $(GNU_PREFIX)" >> $(SDK_MAKEFILE)
+
+blinky:
+	$(MAKE) -C projects/blinky/pca10040/blank/armgcc SDK_ROOT=$(SDK_HOME)
