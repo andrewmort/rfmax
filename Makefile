@@ -57,3 +57,6 @@ $(SDK_MAKEFILE): $(SDK_DIR)
 
 blinky:
 	$(MAKE) -C projects/blinky/pca10040/blank/armgcc SDK_ROOT=$(SDK_HOME)
+
+base:
+	$(MAKE) -C projects/base/pca10040/blank/armgcc SDK_ROOT=$(SDK_HOME)
