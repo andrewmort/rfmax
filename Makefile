@@ -64,8 +64,10 @@ $(SDK_MAKEFILE): $(SDK_DIR)
 	@echo "GNU_PREFIX := $(GNU_PREFIX)" >> $(SDK_MAKEFILE)
 
 nrf52832_xxaa:
+	@echo Making $(PROJECT)...
 	@$(MAKE) -C projects/$(PROJECT)/pca10040/blank/armgcc nrf52832_xxaa SDK_ROOT=$(SDK_HOME)
 
 flash:
+	@echo Flashing $(PROJECT)...
 	@$(MAKE) -C projects/$(PROJECT)/pca10040/blank/armgcc flash SDK_ROOT=$(SDK_HOME)
 
