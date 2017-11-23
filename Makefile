@@ -34,9 +34,17 @@ GNU_VERSION  := $(shell $(GNU_GCC) --version | $(GREP_CMD))
 DOWNLOAD_CMD := curl -o
 UNZIP_CMD    := unzip -q -d
 
-.PHONY: all
+# Default project
+PROJECT      := base
 
-all: $(SDK_MAKEFILE)
+.PHONY: all help
+
+all: $(SDK_MAKEFILE) nrf52832_xxaa
+
+help:
+	@echo The following targets are available:
+	@echo 	nrf52832_xxaa - compile binary
+	@echo 	flash         - flash binary
 
 # Unzip SDK Directory
 $(SDK_DIR): $(SDK_FILE)
@@ -55,8 +63,9 @@ $(SDK_MAKEFILE): $(SDK_DIR)
 	@echo "GNU_VERSION := $(GNU_VERSION)" >> $(SDK_MAKEFILE)
 	@echo "GNU_PREFIX := $(GNU_PREFIX)" >> $(SDK_MAKEFILE)
 
-blinky:
-	$(MAKE) -C projects/blinky/pca10040/blank/armgcc SDK_ROOT=$(SDK_HOME)
+nrf52832_xxaa:
+	@$(MAKE) -C projects/$(PROJECT)/pca10040/blank/armgcc nrf52832_xxaa SDK_ROOT=$(SDK_HOME)
 
-base:
-	$(MAKE) -C projects/base/pca10040/blank/armgcc SDK_ROOT=$(SDK_HOME)
+flash:
+	@$(MAKE) -C projects/$(PROJECT)/pca10040/blank/armgcc flash SDK_ROOT=$(SDK_HOME)
+
