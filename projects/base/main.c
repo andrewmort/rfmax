@@ -18,12 +18,13 @@
 #endif
 
 
-#define PWM_FCLK    16e6
-#define PWM_FCYCLE 160e3
-#define PWM_FIN     40e3
-#define PWM_TIME    10.0
+#define PWM_NRF_CLK  NRF_PWM_CLK_125kHz
+#define PWM_FCLK                  125e3
+#define PWM_FCYCLE                0.10e3
+#define PWM_FIN                    0.25 
+#define PWM_TIME                   30.0
 
-#define NUM_DUTY_CYCLE 512
+#define NUM_DUTY_CYCLE 1024
 
 static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
 
@@ -74,7 +75,7 @@ int main(void) {
   pwm_config.output_pins[2] = NRF_DRV_PWM_PIN_NOT_USED;
   pwm_config.output_pins[3] = NRF_DRV_PWM_PIN_NOT_USED;
   pwm_config.irq_priority   = APP_IRQ_PRIORITY_LOWEST;
-  pwm_config.base_clock     = NRF_PWM_CLK_16MHz;
+  pwm_config.base_clock     = PWM_NRF_CLK;
   pwm_config.count_mode     = NRF_PWM_MODE_UP;
   pwm_config.top_value      = pwm_clks_per_cycle;
   pwm_config.load_mode      = NRF_PWM_LOAD_COMMON;
