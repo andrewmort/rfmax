@@ -60,7 +60,7 @@ int main(void) {
     float amplitude, cycles;
 
     // Calculate amplitude of sine function at input frequency
-    amplitude = sinf(2*PI*k/pwm_cycles_per_period);
+    amplitude = 0.5*sinf(2*PI*k/pwm_cycles_per_period) + 0.5;
 
     // Calculate number of PWM cycles that correspond to this amplitude
     cycles = roundf(pwm_clks_per_cycle*amplitude);
