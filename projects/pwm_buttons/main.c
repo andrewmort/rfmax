@@ -48,6 +48,7 @@
 #include "app_timer.h"
 #include "nrf_drv_clock.h"
 #include "nrf_delay.h"
+#include "nrf_drv_timer.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -62,8 +63,9 @@
 // Buttons to control program
 #define PWM_BUTTON_DEC    BSP_BUTTON_0
 #define PWM_BUTTON_INC    BSP_BUTTON_1
+#define PWM_BUTTON_STOP   BSP_BUTTON_2
 #define PWM_BUTTON_START  BSP_BUTTON_3
-#define NUM_BUTTONS   3
+#define NUM_BUTTONS   4
 
 #define NUM_PWM_MAX_CYCLES 1024
 
@@ -92,6 +94,8 @@ static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
 static uint8_t event_start = 0;
 static uint8_t event_dec   = 0;
 static uint8_t event_inc   = 0;
+static uint8_t pwm_running = 0;
+static uint8_t event_stop  = 0;
 
 /**
  * Button handler
@@ -101,11 +105,27 @@ static void button_handler(uint8_t pin_no, uint8_t button_action) {
     case PWM_BUTTON_START:
       event_start = 1;
       break;
+    case PWM_BUTTON_STOP:
+      event_stop = 1;
+      break;
     case PWM_BUTTON_DEC:
       event_dec = 1;
       break;
     case PWM_BUTTON_INC:
       event_inc = 1;
+      break;
+  }
+}
+
+/**
+ * Timer handler
+ */
+static void timer_handler(nrf_timer_event_t event_type, void* p_context) {
+  switch (event_type) {
+    case NRF_TIMER_EVENT_COMPARE0:
+      event_stop = 1;
+      break;
+    default:
       break;
   }
 }
@@ -133,15 +153,20 @@ static void init_buttons() {
   buttons[0].pull_cfg       = NRF_GPIO_PIN_PULLUP;
   buttons[0].button_handler = button_handler;
 
-  buttons[1].pin_no         = PWM_BUTTON_INC;
+  buttons[1].pin_no         = PWM_BUTTON_STOP;
   buttons[1].active_state   = APP_BUTTON_ACTIVE_LOW;
   buttons[1].pull_cfg       = NRF_GPIO_PIN_PULLUP;
   buttons[1].button_handler = button_handler;
 
-  buttons[2].pin_no         = PWM_BUTTON_DEC;
+  buttons[2].pin_no         = PWM_BUTTON_INC;
   buttons[2].active_state   = APP_BUTTON_ACTIVE_LOW;
   buttons[2].pull_cfg       = NRF_GPIO_PIN_PULLUP;
   buttons[2].button_handler = button_handler;
+
+  buttons[3].pin_no         = PWM_BUTTON_DEC;
+  buttons[3].active_state   = APP_BUTTON_ACTIVE_LOW;
+  buttons[3].pull_cfg       = NRF_GPIO_PIN_PULLUP;
+  buttons[3].button_handler = button_handler;
 
   error_code = app_button_init(buttons, NUM_BUTTONS, APP_TIMER_TICKS(50));
   if (error_code != NRF_SUCCESS) {
@@ -155,6 +180,14 @@ static void init_buttons() {
 }
 
 /**
+ * Uninitialize PWM
+ */
+static void uninit_pwm() {
+  // Uninitialize pwm driver
+  nrf_drv_pwm_uninit(&m_pwm0);
+}
+
+/**
  * Initialize PWM
  */
 static void init_pwm(uint16_t top) {
@@ -164,7 +197,7 @@ static void init_pwm(uint16_t top) {
   NRF_LOG_INFO("init_pwm()");
 
   // Uninitialize pwm driver
-  nrf_drv_pwm_uninit(&m_pwm0);
+  uninit_pwm();
 
   // Set pwm configuration
   pwm_config.output_pins[0] = PWM_OUTPUT0;
@@ -188,15 +221,33 @@ static void init_pwm(uint16_t top) {
 /**
  * Initialize Timer
  */
-static void init_timer() {
+static void init_timer(nrf_drv_timer_t *timer_ptr) {
   uint32_t error_code;
+  uint32_t timer_ticks;
+  nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
 
   NRF_LOG_INFO("init_timer()");
 
+  // Initialize app timer for PWM
   error_code = app_timer_init();
   if (error_code != NRF_SUCCESS) {
     return;
   }
+
+  // Initilize timer with default configuration
+  error_code = nrf_drv_timer_init(timer_ptr, &timer_cfg, timer_handler);
+  if (error_code != NRF_SUCCESS) {
+    return;
+  }
+
+  // Get number of timer ticks for PWM time
+  timer_ticks = nrf_drv_timer_ms_to_ticks(timer_ptr, 1000*PWM_TIME);
+
+  // Set timer compare channel 0 and clear & stop timer and interrupt on compare
+  nrf_drv_timer_extended_compare(
+      timer_ptr, NRF_TIMER_CC_CHANNEL0, timer_ticks,
+      NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK | NRF_TIMER_SHORT_COMPARE0_STOP_MASK,
+      true);
 }
 
 /**
@@ -271,6 +322,14 @@ static void pwm_start(float freq) {
   // Play pwm sequence and loop it pwm_loops number of times, then stop
   nrf_drv_pwm_simple_playback(&m_pwm0, &pwm_seq, pwm_loops, NRF_DRV_PWM_FLAG_STOP);
 }
+
+/**
+ * Stop PWM sequence
+ */
+static void pwm_stop() {
+  uninit_pwm();
+}
+
 /**
  *  1. Initialize everything
  *  2. Wait for button press
@@ -286,10 +345,11 @@ static void pwm_start(float freq) {
  */
 int main(void) {
   static float freq;
+  nrf_drv_timer_t timer = NRF_DRV_TIMER_INSTANCE(0);
 
   // Initialize everything
   init_log();
-  init_timer();
+  init_timer(&timer);
   init_clock();
   init_leds();
   init_buttons();
@@ -301,11 +361,23 @@ int main(void) {
 
   // Loop forever
   while (true) {
-    // start pwm sequence
+    // Stop pwm sequence
+    if (event_stop) {
+      pwm_stop();
+      event_stop = 0;
+      pwm_running = 0;
+
+      // Clear LED
+      // TODO make this fit defines better
+      bsp_board_led_off(BSP_LED_0);
+    }
+
+    // Start pwm sequence
     if (event_start) {
       NRF_LOG_INFO("main(): begin pwm sequence", freq);
       pwm_start(freq);
       event_start = 0;
+      pwm_running = 1;
     }
 
     // Increment frequency
@@ -317,6 +389,10 @@ int main(void) {
       }
       // Reset event
       event_inc = 0;
+      // Change frequency
+      if (pwm_running) {
+        pwm_start(freq);
+      }
     }
 
     // Decrement frequency
@@ -328,6 +404,10 @@ int main(void) {
       }
       // Reset event
       event_dec = 0;
+      // Change frequency
+      if (pwm_running) {
+        pwm_start(freq);
+      }
     }
   }
 }
