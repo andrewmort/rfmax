@@ -89,8 +89,6 @@
   #define PWM_OUTPUT1                 BSP_LED_0
 #endif
 
-static nrf_drv_pwm_t m_pwm0 = NRF_DRV_PWM_INSTANCE(0);
-
 static uint8_t event_start = 0;
 static uint8_t event_dec   = 0;
 static uint8_t event_inc   = 0;
@@ -182,22 +180,22 @@ static void init_buttons() {
 /**
  * Uninitialize PWM
  */
-static void uninit_pwm() {
+static void uninit_pwm(nrf_drv_pwm_t *pwm_ptr) {
   // Uninitialize pwm driver
-  nrf_drv_pwm_uninit(&m_pwm0);
+  nrf_drv_pwm_uninit(pwm_ptr);
 }
 
 /**
  * Initialize PWM
  */
-static void init_pwm(uint16_t top) {
+static void init_pwm(nrf_drv_pwm_t *pwm_ptr, uint16_t top) {
   uint32_t error_code;
   nrf_drv_pwm_config_t pwm_config;
 
   NRF_LOG_INFO("init_pwm()");
 
   // Uninitialize pwm driver
-  uninit_pwm();
+  uninit_pwm(pwm_ptr);
 
   // Set pwm configuration
   pwm_config.output_pins[0] = PWM_OUTPUT0;
@@ -212,7 +210,7 @@ static void init_pwm(uint16_t top) {
   pwm_config.step_mode      = NRF_PWM_STEP_AUTO;
 
   // Initialize pwm driver with new settings
-  error_code = nrf_drv_pwm_init(&m_pwm0, &pwm_config, NULL);
+  error_code = nrf_drv_pwm_init(pwm_ptr, &pwm_config, NULL);
   if (error_code != NRF_SUCCESS) {
     return;
   }
@@ -288,7 +286,7 @@ static void timer_start(nrf_drv_timer_t *timer_ptr) {
 /**
  * Start PWM sequence
  */
-static void pwm_start(float freq) {
+static void pwm_start(nrf_drv_pwm_t *pwm_ptr, float freq) {
   static nrf_pwm_values_common_t duty_cycle[NUM_PWM_MAX_CYCLES];
   nrf_pwm_sequence_t pwm_seq;
 
@@ -316,7 +314,7 @@ static void pwm_start(float freq) {
   }
 
   // Initialize pwm with top counter
-  init_pwm(pwm_clks_per_cycle);
+  init_pwm(pwm_ptr, pwm_clks_per_cycle);
 
   // Set pwm sequence
   pwm_seq.values.p_common = duty_cycle;
@@ -325,14 +323,14 @@ static void pwm_start(float freq) {
   pwm_seq.end_delay       = 0;
 
   // Play pwm sequence and loop it pwm_loops number of times, then stop
-  nrf_drv_pwm_simple_playback(&m_pwm0, &pwm_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
+  nrf_drv_pwm_simple_playback(pwm_ptr, &pwm_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
 }
 
 /**
  * Stop PWM sequence
  */
-static void pwm_stop() {
-  uninit_pwm();
+static void pwm_stop(nrf_drv_pwm_t *pwm_ptr) {
+  uninit_pwm(pwm_ptr);
 }
 
 /**
@@ -351,6 +349,8 @@ static void pwm_stop() {
 int main(void) {
   static float freq;
   nrf_drv_timer_t timer = NRF_DRV_TIMER_INSTANCE(0);
+  nrf_drv_pwm_t pwm = NRF_DRV_PWM_INSTANCE(0);
+
 
   // Initialize everything
   init_log();
@@ -368,7 +368,7 @@ int main(void) {
   while (true) {
     // Stop pwm sequence
     if (event_stop) {
-      pwm_stop();
+      pwm_stop(&pwm);
       event_stop = 0;
       pwm_running = 0;
 
@@ -380,7 +380,7 @@ int main(void) {
     // Start pwm sequence
     if (event_start) {
       NRF_LOG_INFO("main(): begin pwm sequence", freq);
-      pwm_start(freq);
+      pwm_start(&pwm, freq);
       timer_start(&timer);
       event_start = 0;
       pwm_running = 1;
@@ -397,7 +397,7 @@ int main(void) {
       event_inc = 0;
       // Change frequency
       if (pwm_running) {
-        pwm_start(freq);
+        pwm_start(&pwm, freq);
       }
     }
 
@@ -412,7 +412,7 @@ int main(void) {
       event_dec = 0;
       // Change frequency
       if (pwm_running) {
-        pwm_start(freq);
+        pwm_start(&pwm, freq);
       }
     }
   }
