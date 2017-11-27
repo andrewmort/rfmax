@@ -277,6 +277,15 @@ static void init_log() {
 }
 
 /**
+ * Start Timer
+ */
+static void timer_start(nrf_drv_timer_t *timer_ptr) {
+  // Clear timer and start
+  nrf_drv_timer_clear(timer_ptr);
+  nrf_drv_timer_enable(timer_ptr);
+}
+
+/**
  * Start PWM sequence
  */
 static void pwm_start(float freq) {
@@ -285,16 +294,12 @@ static void pwm_start(float freq) {
 
   uint16_t pwm_clks_per_cycle;
   uint16_t pwm_cycles_per_period;
-  uint16_t pwm_loops;
 
   // Number of system clocks per pwm cycle
   pwm_clks_per_cycle = (uint16_t) PWM_FCLK/PWM_FCYCLE;
 
   // Number of pwm cycles per period of input
-  pwm_cycles_per_period = (uint16_t) (PWM_FCLK/pwm_clks_per_cycle)/PWM_FIN;
-
-  // Number of loops required for pwm sequence to repeat for PWM_TIME
-  pwm_loops = (uint16_t) PWM_TIME*PWM_FCLK/(pwm_clks_per_cycle*pwm_cycles_per_period);
+  pwm_cycles_per_period = (uint16_t) (PWM_FCLK/pwm_clks_per_cycle)/freq;
 
   // Generate PWM duty cycle array
   for (uint16_t k = 0; k < pwm_cycles_per_period; k++) {
@@ -320,7 +325,7 @@ static void pwm_start(float freq) {
   pwm_seq.end_delay       = 0;
 
   // Play pwm sequence and loop it pwm_loops number of times, then stop
-  nrf_drv_pwm_simple_playback(&m_pwm0, &pwm_seq, pwm_loops, NRF_DRV_PWM_FLAG_STOP);
+  nrf_drv_pwm_simple_playback(&m_pwm0, &pwm_seq, 1, NRF_DRV_PWM_FLAG_LOOP);
 }
 
 /**
@@ -369,13 +374,14 @@ int main(void) {
 
       // Clear LED
       // TODO make this fit defines better
-      bsp_board_led_off(BSP_LED_0);
+      nrf_gpio_pin_set(BSP_LED_0);
     }
 
     // Start pwm sequence
     if (event_start) {
       NRF_LOG_INFO("main(): begin pwm sequence", freq);
       pwm_start(freq);
+      timer_start(&timer);
       event_start = 0;
       pwm_running = 1;
     }
