@@ -69,24 +69,24 @@
 
 #define NUM_PWM_MAX_CYCLES 1024
 
-#define PWM_LED
+//#define USE_PWM_LED
 
-#ifdef PWM_LED
+#ifdef USE_PWM_LED
   #define PWM_NRF_CLK        NRF_PWM_CLK_125kHz
   #define PWM_FCLK                        125e3
   #define PWM_FCYCLE                     0.10e3
   #define PWM_FIN                          0.25
   #define PWM_TIME                         30.0
-  #define PWM_OUTPUT0                 BSP_LED_0
-  #define PWM_OUTPUT1  NRF_DRV_PWM_PIN_NOT_USED
+  #define PWM_OUT      NRF_DRV_PWM_PIN_NOT_USED
+  #define PWM_LED                     BSP_LED_0
 #else
   #define PWM_NRF_CLK         NRF_PWM_CLK_16MHz
   #define PWM_FCLK                         16e6
   #define PWM_FCYCLE                      160e3
-  #define PWM_FIN                           1e3
-  #define PWM_TIME                         10.0
-  #define PWM_OUTPUT0  NRF_DRV_PWM_PIN_NOT_USED
-  #define PWM_OUTPUT1                 BSP_LED_0
+  #define PWM_FIN                           2e3
+  #define PWM_TIME                         30.0
+  #define PWM_OUT                             2   // Use P00.2
+  #define PWM_LED                     BSP_LED_0
 #endif
 
 static uint8_t event_start = 0;
@@ -131,10 +131,15 @@ static void timer_handler(nrf_timer_event_t event_type, void* p_context) {
 /**
  * Initialize LEDs
  */
-static void init_leds() {
-  NRF_LOG_INFO("init_leds()");
+static void init_gpio() {
+  NRF_LOG_INFO("init_gpio()");
 
   bsp_board_leds_init();
+
+  // Configure pin as output
+  if (PWM_OUT != NRF_DRV_PWM_PIN_NOT_USED) {
+    nrf_gpio_cfg_output(PWM_OUT);
+  }
 }
 
 /**
@@ -198,8 +203,8 @@ static void init_pwm(nrf_drv_pwm_t *pwm_ptr, uint16_t top) {
   uninit_pwm(pwm_ptr);
 
   // Set pwm configuration
-  pwm_config.output_pins[0] = PWM_OUTPUT0;
-  pwm_config.output_pins[1] = PWM_OUTPUT1;
+  pwm_config.output_pins[0] = PWM_OUT;
+  pwm_config.output_pins[1] = PWM_LED;
   pwm_config.output_pins[2] = NRF_DRV_PWM_PIN_NOT_USED;
   pwm_config.output_pins[3] = NRF_DRV_PWM_PIN_NOT_USED;
   pwm_config.irq_priority   = APP_IRQ_PRIORITY_LOWEST;
@@ -356,7 +361,7 @@ int main(void) {
   init_log();
   init_timer(&timer);
   init_clock();
-  init_leds();
+  init_gpio();
   init_buttons();
 
   // Set initial frequency
@@ -374,7 +379,7 @@ int main(void) {
 
       // Clear LED
       // TODO make this fit defines better
-      nrf_gpio_pin_set(BSP_LED_0);
+      nrf_gpio_pin_set(PWM_LED);
     }
 
     // Start pwm sequence
