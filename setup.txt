@@ -1,6 +1,7 @@
 Setup is done following steps from https://devzone.nordicsemi.com/tutorials/7/
 
 1. Download and install jlink software
+    https://www.segger.com/downloads/jlink/#J-LinkSoftwareAndDocumentationPack
 2. Download nRF5 Command Line Tools, unzip, and move to /usr/local/
 3. Link nrfjprog from nRF5 command line tools to /usr/local/bin
 4. Download arm-gcc for MacOSX, unzip, and move to /usr/local/
