@@ -1,30 +1,30 @@
 /**
  * Copyright (c) 2015 - 2017, Nordic Semiconductor ASA
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form, except as embedded into a Nordic
  *    Semiconductor ASA integrated circuit in a product or a software update for
  *    such product, must reproduce the above copyright notice, this list of
  *    conditions and the following disclaimer in the documentation and/or other
  *    materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
  *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
- * 
+ *
  * 4. This software, with or without modification, must only be used with a
  *    Nordic Semiconductor ASA integrated circuit.
- * 
+ *
  * 5. Any software provided in binary form under this license must not be reverse
  *    engineered, decompiled, modified and/or disassembled.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
  * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,7 +35,18 @@
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
+ */
+
+/*
+ *
+ * Description: This program uses the buttons to start a pwm sine wave signal.
+ *  The buttons, as labeled on the board, perform the following functions:
+ *    Button 1: Decrement Frequency
+ *    Button 2: Increment Frequency
+ *    Button 3: Stop PWM Waveform
+ *    Button 4: Start PWM Waveform
+ *
  */
 
 #include <stdbool.h>
@@ -69,7 +80,7 @@
 
 #define NUM_PWM_MAX_CYCLES 1024
 
-//#define USE_PWM_LED
+#define USE_PWM_LED
 
 #ifdef USE_PWM_LED
   #define PWM_NRF_CLK        NRF_PWM_CLK_125kHz
@@ -99,6 +110,10 @@ static uint8_t event_stop  = 0;
  * Button handler
  */
 static void button_handler(uint8_t pin_no, uint8_t button_action) {
+  // Ensure button is actually pushed
+  if (!app_button_is_pushed(pin_no)) return;
+
+  // Set flags to indicate action
   switch (pin_no) {
     case PWM_BUTTON_START:
       event_start = 1;
@@ -367,12 +382,17 @@ int main(void) {
   // Set initial frequency
   freq = PWM_FIN;
 
-  NRF_LOG_INFO("main(): start loop, freq=%f", freq);
+  NRF_LOG_INFO("main(): start loop, freq=" NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(freq));
 
   // Loop forever
   while (true) {
+
+    // Process log entries
+    NRF_LOG_PROCESS();
+
     // Stop pwm sequence
     if (event_stop) {
+      NRF_LOG_INFO("main(): stop pwm sequence");
       pwm_stop(&pwm);
       event_stop = 0;
       pwm_running = 0;
@@ -384,7 +404,7 @@ int main(void) {
 
     // Start pwm sequence
     if (event_start) {
-      NRF_LOG_INFO("main(): begin pwm sequence", freq);
+      NRF_LOG_INFO("main(): begin pwm sequence");
       pwm_start(&pwm, freq);
       timer_start(&timer);
       event_start = 0;
@@ -396,7 +416,7 @@ int main(void) {
       // Ensure freq is always less than PWM_FCLK/2
       if (freq <= PWM_FCLK/4) {
         freq *= 2;
-        NRF_LOG_INFO("main(): increment freq to %f", freq);
+        NRF_LOG_INFO("main(): increment freq to " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(freq));
       }
       // Reset event
       event_inc = 0;
@@ -411,7 +431,7 @@ int main(void) {
       // Ensure freq is high enough that vector will fit into array
       if (freq > PWM_FCYCLE/NUM_PWM_MAX_CYCLES) {
         freq /= 2;
-        NRF_LOG_INFO("main(): decrement freq to %f", freq);
+        NRF_LOG_INFO("main(): decrement freq to " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(freq));
       }
       // Reset event
       event_dec = 0;
