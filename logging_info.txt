@@ -1,0 +1,35 @@
+Logging by default on nRF52 uses a buffered structure.
+
+
+For the "pwm_buttons" project, the defined configurations can be set in 
+  "projects/pwm_buttons/pca10040/blank/config/sdk_config.h"
+
+
+The RTT logging allows the RTT transfer client to be used to read log messages.
+This must be enabled in the "sdk_config.h" file.
+
+
+To connect to device that is logging:
+  In one terminal type: "JLinkExe -device nRF52 -speed 4000 -if SWD"
+  In another termainl type: "JLinkRTTClient"
+    Then type: "connect"
+    View log output on screen
+
+
+To start logging in program:
+  // Initialize logging
+  NRF_LOG_INIT(NULL);
+
+  // Set default backends
+  NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+  // Add information to log
+  NRF_LOG_INFO("log message");
+
+  // Add float to log
+  NRF_LOG_INFO("main(): increment freq to " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(freq));
+
+  // Process log entries
+  while (true) {
+    NRF_LOG_PROCESS();
+  }
